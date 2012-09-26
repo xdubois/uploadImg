@@ -1,17 +1,18 @@
 ﻿<?php
+/*
+uploadImg v0.1
+xDubois - 26.09.2012
+
+*/
 class uploadImg{
 
 	private $url_src; //source image
-	private $targetPath; //chemin d'enrgistrement
+	private $targetPath; //chemin d'enregistrement
 	private $dest_folder;
 	private $img; //Info sur l'image
-	private $ext; //extension
 	private $mime; //liste type mime autorisé
-	private $im; //miniature
 	private $name; //nom photo
 	private $rename; //Bool 
-	
-
 
 	public function __construct($dest_folder = '',$rename = FALSE){
 		
@@ -28,28 +29,19 @@ class uploadImg{
 	public function setMime($mime){
 	    
 	    $this->mime = $mime;
-	    //todo
-	    
-	}
-	
-	public function _checkDir($dir){
-	    
-	    if(!is_dir($dir)){
-		mkdir($dir);
-		
-	    }   
 	}
 	
 	public function get($url){
 		$this->url_src = $url;
-		
+	
 		if($this->fileExists($this->url_src) !== FALSE){
 		
 			$this->img = getimagesize($this->url_src);
 			if($this->checkMime() !== FALSE){
 				 
-				 if($this->rename)
-				    $this->name = $this->randName().$this->ext;
+				 if($this->rename){
+				    $this->name = $this->randName().'.'.$this->getExt();
+				}
 				else
 				    $this->name = basename($this->url_src);
 		
@@ -68,78 +60,105 @@ class uploadImg{
 	}
 	
 	public function upload($file){
-	    $this->url_src = $file['tmp_name'];
 	    $this->img = getimagesize($file['tmp_name']);
-	    
-	
-	    if($this->checkMime() !== FALSE){
-		if($this->rename)
-		    $this->name = $this->randName().$this->ext;
-		else
-		    $this->name = $file['name'];
-		    
-		if(move_uploaded_file($file['tmp_name'],$this->targetPath.$this->name))
-		    return $this->name;
-		else
-		    return false;
-	   }
-	}
-    
-	
-	private function checkMime(){
-	    if(in_array($this->img['mime'],$this->mime)){
 		
-		switch ($this->img['mime']) { 
-		    case "image/gif": 
-			    $this->ext = '.gif';
-			    $this->im = @imagecreatefromgif($this->url_src);
-			    break; 
-		    case "image/jpeg": 
-			    $this->ext = '.jpg';
-			    $this->im = @imagecreatefromjpeg($this->url_src);
-			    break; 
-		    case "image/png":
-			    $this->ext = '.png';
-			    $this->im = @imagecreatefrompng($this->url_src);
-			    break; 
-		}
-	    }
-	    else{
+	    if($this->checkMime() !== FALSE){
+			if($this->rename)
+				$this->name = $this->randName().'.'.$this->getExt();
+			else
+				$this->name = $file['name'];
+		    
+			if(move_uploaded_file($file['tmp_name'],$this->targetPath.$this->name)){
+				$this->url_src = $this->targetPath.$this->name;
+				return $this->name;
+				}
+			else
+				return false;
+	   }
 		return false;
-	    }
-	    
 	}
 	
-	
-	function fileExists($path){
-	    return (@fopen($path,"r")==true);
-	}
-	
-	public function creatMin($max_width = 200,  $max_height = 400, $minSuffixe= 'min_', $minFolder = '/'){
+	public function createMin($max_width = 200,  $max_height = 400, $minSuffixe= 'min_', $minFolder = '/'){
 	   
 	    $this->_checkDir($this->dest_folder.'/'.$minFolder);   
+		
+		switch ($this->img['mime']) { 
+			case "image/gif": 
+				$im = @imagecreatefromgif($this->url_src);
+				break; 
+			case "image/jpeg": 
+				$im = @imagecreatefromjpeg($this->url_src);
+				break; 
+			case "image/png":
+				$im = @imagecreatefrompng($this->url_src);
+				break; 
+			default:
+				 $im = false;
+				break;
+		}
+		if($im){
+			//Creation miniature
+			$l=$this->img[0]; //largeur
+			$h=$this->img[1]; //hauteur
+			
+			//Calcule taille via un ratio
+			$ratioh = $max_height/$l; 
+			$ratiow = $max_width/$h; 
+			$ratio = min($ratioh,$ratiow); 
+			$l = intval($ratio*$l); 
+			$h = intval($ratio*$h);
+			
+			$destination = imagecreatetruecolor($l, $h); // On crée la miniature vide
+			$ls = imagesx($im);
+			$hs = imagesy($im);
+			$ld = imagesx($destination);
+			$hd = imagesy($destination);
+			//on remplit
+			imagecopyresampled($destination, $im, 0, 0, 0, 0, $ld, $hd, $ls, $hs);
+			imagejpeg($destination, $this->targetPath.$minFolder.'/'.$minSuffixe.$this->name);
+			
+			switch ($this->img['mime']) { 
+				case "image/gif": 
+					imagegif($destination, $this->targetPath.$minFolder.'/'.$minSuffixe.$this->name);
+					break; 
+				case "image/jpeg": 
+					imagejpeg($destination, $this->targetPath.$minFolder.'/'.$minSuffixe.$this->name);
+					break; 
+				case "image/png":
+					imagepng($destination, $this->targetPath.$minFolder.'/'.$minSuffixe.$this->name);
+					break; 
+			}
 	
-	    //Creation miniature
-	    $l=$this->img[0]; //largeur
-	    $h=$this->img[1]; //hauteur
-	    
-	    //Calcule taille via un ratio
-	    $ratioh = $max_height/$l; 
-	    $ratiow = $max_width/$h; 
-	    $ratio = min($ratioh,$ratiow); 
-	    $l = intval($ratio*$l); 
-	    $h = intval($ratio*$h);
-	    
-	    $destination = imagecreatetruecolor($l, $h); // On crée la miniature vide
-	    $ls = imagesx($this->im);
-	    $hs = imagesy($this->im);
-	    $ld = imagesx($destination);
-	    $hd = imagesy($destination);
-	    //on remplit
-	    imagecopyresampled($destination, $this->im, 0, 0, 0, 0, $ld, $hd, $ls, $hs);
-	    imagejpeg($destination, $this->targetPath.$minFolder.'/'.$minSuffixe.$this->name);
+		}
+		else
+			return false;
 	}
 	
+	private function _checkDir($dir){
+	
+		if(!is_dir($dir)){
+		mkdir($dir);
+		
+		}   
+	}
+	
+	
+	private function getExt(){
+	$ext = explode('/',$this->img['mime']);
+	if($ext[1] == 'jpeg')
+		$ext[1] = 'jpg';
+		
+	return $ext[1];
+	}
+	
+	private function checkMime(){
+		return in_array($this->img['mime'],$this->mime);
+	}
+	
+	
+	private function fileExists($path){
+	    return (@fopen($path,"r")==true);
+	}
 	
 	
 	private function moveImg($url,$saveto){
@@ -166,12 +185,11 @@ class uploadImg{
 	    "1","2","3","4","5","6","7","8","9");
 	    
 	    $keys = array();
-	    
 	    while(count($keys) < 7) {
-		$x = mt_rand(0, count($characters)-1);
-		if(!in_array($x, $keys)) {
-		   $keys[] = $x;
-		}
+			$x = mt_rand(0, count($characters)-1);
+			if(!in_array($x, $keys)) {
+			   $keys[] = $x;
+			}
 	    }
 	    $random_chars="";
 	    foreach($keys as $key){
