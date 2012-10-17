@@ -1,7 +1,7 @@
 <?php
 require 'class.uploadImg.php';
 
-$url = 'http://www.pikanus.net/img/2010/jXsTZ5q.jpg';
+$url = 'http://www.url.com/my_img.png';
 
 $test = new uploadImg('caca',true);
 $res = $test->get($url);
