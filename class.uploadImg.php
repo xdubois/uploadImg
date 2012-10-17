@@ -13,16 +13,17 @@ class uploadImg{
 	private $mime; //liste type mime autorisé
 	private $name; //nom photo
 	private $rename; //Bool 
+	private $temp_dir;
 
 	public function __construct($dest_folder = '',$rename = FALSE){
 		
 		$this->dest_folder = $dest_folder;
-		$this->targetPath = $this->dest_folder .'/';
-		//$this->targetPath = $_SERVER['DOCUMENT_ROOT'].$this->dest_folder .'/';
-		$this->mime = array('image/gif','image/jpeg','image/png');
+		//$this->targetPath = $this->dest_folder .'/';
+		$this->targetPath = $_SERVER['DOCUMENT_ROOT'].$this->dest_folder.'/';
+		$this->mime = array('image/gif','image/jpeg','image/jpg','image/png');
 		$this->rename = $rename;
-		    
-		$this->_checkDir($this->dest_folder);   
+		$this->temp_dir = $this->targetPath.'/temp/';
+		$this->_checkDir($this->targetPath);   
 		
 	}
 	
@@ -32,36 +33,56 @@ class uploadImg{
 	}
 	
 	public function get($url){
-		$this->url_src = $url;
-	
-		if($this->fileExists($this->url_src) !== FALSE){
 		
-			$this->img = getimagesize($this->url_src);
-			if($this->checkMime() !== FALSE){
-				 
-				 if($this->rename){
-				    $this->name = $this->randName().'.'.$this->getExt();
+		$ch = curl_init ($url);
+	    curl_setopt($ch, CURLOPT_HEADER, 0);
+	    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	    curl_setopt($ch, CURLOPT_BINARYTRANSFER,1);
+	    $raw=curl_exec($ch);
+
+		if(curl_getinfo($ch, CURLINFO_CONTENT_TYPE) !== FALSE){
+			
+			$this->img['mime'] = curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+			curl_close ($ch);
+			
+			if(file_exists($this->temp_dir.basename($url)))
+				unlink($this->temp_dir.basename($url));
+		
+			$fp = fopen($this->temp_dir.basename($url),'x');
+			fwrite($fp, $raw);
+			fclose($fp);
+				
+			$this->img = getimagesize($this->temp_dir.basename($url));
+			unlink($this->temp_dir.basename($url));
+			if($this->img !== FALSE){
+				if($this->checkMime() !== FALSE){
+					if($this->rename){
+							$this->name = $this->randName().'.'.$this->getExt();//.$this->getExt();
+					}
+					else
+						$this->name = basename($this->url_src);
+
+					$fp =($this->targetPath.$this->name,'x');
+					fwrite($fp, $raw);
+					fclose($fp);
+					
+					$this->url_src = $this->targetPath.$this->name;
+					$this->img = getimagesize($this->targetPath.$this->name);
+					return $this->name;
 				}
 				else
-				    $this->name = basename($this->url_src);
-		
-				$this->moveImg($this->url_src,$this->targetPath.$this->name);
-				return $this->name;
+					return false;
 			}
-			else{
-				return false;
-			}
-		
-		}
-		else{
 			return false;
-
+			
 		}
+		else
+			return false;
+		
 	}
 	
 	public function upload($file){
 	    $this->img = getimagesize($file['tmp_name']);
-		
 	    if($this->checkMime() !== FALSE){
 			if($this->rename)
 				$this->name = $this->randName().'.'.$this->getExt();
@@ -70,7 +91,7 @@ class uploadImg{
 		    
 			if(move_uploaded_file($file['tmp_name'],$this->targetPath.$this->name)){
 				$this->url_src = $this->targetPath.$this->name;
-				return $this->name;
+				return $this->name ;
 				}
 			else
 				return false;
@@ -78,9 +99,9 @@ class uploadImg{
 		return false;
 	}
 	
-	public function createMin($max_width = 200,  $max_height = 400, $minSuffixe= 'min_', $minFolder = '/'){
+	public function createMin($max_width = 200,  $max_height = 400, $minSuffixe= 'min_', $minFolder = ''){
 	   
-	    $this->_checkDir($this->dest_folder.'/'.$minFolder);   
+	    $this->_checkDir($this->targetPath.'/'.$minFolder);   
 		
 		switch ($this->img['mime']) { 
 			case "image/gif": 
@@ -88,7 +109,7 @@ class uploadImg{
 				break; 
 			case "image/jpeg": 
 				$im = @imagecreatefromjpeg($this->url_src);
-				break; 
+				break;
 			case "image/png":
 				$im = @imagecreatefrompng($this->url_src);
 				break; 
@@ -123,7 +144,7 @@ class uploadImg{
 					break; 
 				case "image/jpeg": 
 					imagejpeg($destination, $this->targetPath.$minFolder.'/'.$minSuffixe.$this->name);
-					break; 
+					break;
 				case "image/png":
 					imagepng($destination, $this->targetPath.$minFolder.'/'.$minSuffixe.$this->name);
 					break; 
@@ -135,11 +156,8 @@ class uploadImg{
 	}
 	
 	private function _checkDir($dir){
-	
-		if(!is_dir($dir)){
-		mkdir($dir);
-		
-		}   
+		if(!is_dir($dir))
+			@mkdir($dir);
 	}
 	
 	
@@ -157,24 +175,9 @@ class uploadImg{
 	
 	
 	private function fileExists($path){
-	    return (@fopen($path,"r")==true);
+	    return (@fopen($path,"r"));
 	}
 	
-	
-	private function moveImg($url,$saveto){
-	    $ch = curl_init ($url);
-	    curl_setopt($ch, CURLOPT_HEADER, 0);
-	    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
-	    curl_setopt($ch, CURLOPT_BINARYTRANSFER,1);
-	    $raw=curl_exec($ch);
-	    curl_close ($ch);
-	    if(file_exists($saveto)){
-		    unlink($saveto);
-	    }
-	    $fp = fopen($saveto,'x');
-	    fwrite($fp, $raw);
-	    fclose($fp);
-	}
 	
 	private function randName(){
 	    $characters = array(

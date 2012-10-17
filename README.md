@@ -11,6 +11,8 @@ param 1 : destination folder
 param 2 : set if the image name has to be renamed with a random name.
 
 $myUpload->get($url)
+youn need a temp folder in $folder_dest
+myfolder/temp/
 
 upload remote img from url
 
