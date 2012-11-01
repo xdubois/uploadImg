@@ -34,7 +34,7 @@ class uploadImg{
 	
 	public function get($url){
 		
-		$ch = curl_init ($url);
+	    $ch = curl_init ($url);
 	    curl_setopt($ch, CURLOPT_HEADER, 0);
 	    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
 	    curl_setopt($ch, CURLOPT_BINARYTRANSFER,1);
@@ -62,7 +62,7 @@ class uploadImg{
 					else
 						$this->name = basename($this->url_src);
 
-					$fp =($this->targetPath.$this->name,'x');
+					$fp = fopen($this->targetPath.$this->name,'x');
 					fwrite($fp, $raw);
 					fclose($fp);
 					
@@ -153,6 +153,48 @@ class uploadImg{
 		}
 		else
 			return false;
+	}
+	
+	public function watermark(){
+
+		switch ($this->img['mime']) { 
+			case "image/gif": 
+				$img = @imagecreatefromgif($this->url_src);
+				break; 
+			case "image/jpeg": 
+				$img = @imagecreatefromjpeg($this->url_src);
+				break;
+			case "image/png":
+				$img = @imagecreatefrompng($this->url_src);
+				imagesavealpha($img,true);
+				break; 
+			default:
+				 $im = false;
+				break;
+		}
+		
+		$x1_txt = $this->img[0] - 115;
+		$y1_txt = $this->img[1] - 5;
+		
+		$letter_color = imagecolorresolvealpha($img, 250, 250, 250,0);
+		
+		$text = "@ pikanus.net";
+		imagettftext($img, 14, 0, $x1_txt, $y1_txt, $letter_color, "assets/impact.ttf", $text);
+		
+		switch ($this->img['mime']) { 
+			case "image/gif": 
+				imagegif($img, $this->targetPath.$this->name);
+				break; 
+			case "image/jpeg": 
+				imagejpeg($img, $this->targetPath.$this->name);
+				break;
+			case "image/png":
+				imagepng($img, $this->targetPath.$this->name);
+				break; 
+		}
+		imagedestroy($img);
+		
+		
 	}
 	
 	private function _checkDir($dir){
