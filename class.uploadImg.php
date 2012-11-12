@@ -252,27 +252,9 @@ class uploadImg{
 	}
 	
 	
-	private function randName(){
-	    $characters = array(
-	    "A","B","C","D","E","F","G","H","J","K","L","M",
-	    "N","P","Q","R","S","T","U","V","W","X","Y","Z",
-	    "a","b","c","d","e","f","g","h","j","k","l","m",
-	    "n","p","q","r","s","t","u","v","w","x","y","z",
-	    "1","2","3","4","5","6","7","8","9");
+	private function randName($char = 7){
 	    
-	    $keys = array();
-	    while(count($keys) < 7) {
-			$x = mt_rand(0, count($characters)-1);
-			if(!in_array($x, $keys)) {
-			   $keys[] = $x;
-			}
-	    }
-	    $random_chars="";
-	    foreach($keys as $key){
-	       $random_chars .= $characters[$key];
-	    }
-	    
-	    return $random_chars;
+	    return substr(base64_encode(sha1(mt_rand())), 0, $char);
 	}
 }
 
