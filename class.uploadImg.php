@@ -155,9 +155,9 @@ class uploadImg{
 	
 	public function setImg($img){
 			
-			$this->url_src = __DIR__.'/'.$img;
-			$this->name = $img;
-			$this->img = getimagesize($this->url_src);
+		$this->url_src = __DIR__.'/'.$img;
+		$this->name = $img;
+		$this->img = getimagesize($this->url_src);
 	
 	}
 	
@@ -233,29 +233,24 @@ class uploadImg{
 			@mkdir($dir);
 	}
 	
-	
 	private function getExt(){
-	$ext = explode('/',$this->img['mime']);
-	if($ext[1] == 'jpeg')
-		$ext[1] = 'jpg';
+		$ext = explode('/',$this->img['mime']);
+		if($ext[1] == 'jpeg')
+			$ext[1] = 'jpg';
 		
-	return $ext[1];
+		return $ext[1];
 	}
 	
 	private function checkMime(){
 		return in_array($this->img['mime'],$this->mime);
 	}
 	
-	
 	private function fileExists($path){
 	    return (@fopen($path,"r"));
 	}
 	
-	
 	private function randName($char = 7){
-	    
 	    return substr(base64_encode(sha1(mt_rand())), 0, $char);
 	}
 }
-
 ?>
