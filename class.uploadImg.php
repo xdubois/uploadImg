@@ -1,6 +1,6 @@
 ﻿<?php
 /*
-uploadImg v0.1
+uploadImg v0.2
 xDubois - 26.09.2012
 
 */
@@ -8,8 +8,7 @@ class uploadImg{
 
 	private $url_src; //source image
 	private $targetPath; //chemin d'enregistrement
-	private $dest_folder;
-	private $img; //Info sur l'image
+	public $img; //Info sur l'image
 	private $mime; //liste type mime autorisé
 	private $name; //nom photo
 	private $rename; //Bool 
@@ -17,14 +16,13 @@ class uploadImg{
 
 	public function __construct($dest_folder = '',$rename = FALSE){
 		
-		$this->dest_folder = $dest_folder;
-		//$this->targetPath = $this->dest_folder .'/';
-		$this->targetPath = $_SERVER['DOCUMENT_ROOT'].$this->dest_folder.'/';
+		$this->targetPath = $_SERVER['DOCUMENT_ROOT'].$dest_folder.'/';
 		$this->mime = array('image/gif','image/jpeg','image/jpg','image/png');
 		$this->rename = $rename;
 		$this->temp_dir = $this->targetPath.'/temp/';
 		$this->_checkDir($this->targetPath);   
-		
+		$this->_checkDir($this->temp_dir);   
+
 	}
 	
 	public function setMime($mime){
@@ -155,7 +153,15 @@ class uploadImg{
 			return false;
 	}
 	
-	public function watermark(){
+	public function setImg($img){
+			
+			$this->url_src = __DIR__.'/'.$img;
+			$this->name = $img;
+			$this->img = getimagesize($this->url_src);
+	
+	}
+	
+	public function watermark($text,$font_pos = 'right',$font_size = 12,$font_file,$padding = 10,$font_color = array(255,255,255,0)){
 
 		switch ($this->img['mime']) { 
 			case "image/gif": 
@@ -173,13 +179,40 @@ class uploadImg{
 				break;
 		}
 		
-		$x1_txt = $this->img[0] - 115;
-		$y1_txt = $this->img[1] - 5;
+		//box text
+		$rect = imagettfbbox($font_size,0,$font_file,$text);
+		$minX = min(array($rect[0],$rect[2],$rect[4],$rect[6]));
+		$maxX = max(array($rect[0],$rect[2],$rect[4],$rect[6]));
+		$minY = min(array($rect[1],$rect[3],$rect[5],$rect[7]));
+		$maxY = max(array($rect[1],$rect[3],$rect[5],$rect[7]));
+		$the_box = array(
+		 "left"   => abs($minX) - 1,
+		 "top"    => abs($minY) - 1,
+		 "width"  => $maxX - $minX,
+		 "height" => $maxY - $minY,
+		 "box"    => $rect
+		); 
 		
-		$letter_color = imagecolorresolvealpha($img, 250, 250, 250,0);
+		switch ($font_pos){
+			case 'right':
+				$posX = $this->img[0] - $the_box["width"] - $padding;
+				$posY = $this->img[1] - $padding;
+				break;
+			case 'left':
+				$posX = $padding;
+				$posY = $this->img[1] - $padding;
+				break;
+			case 'center':
+				$posX = $the_box["left"] + ($this->img[0] / 2) - ($the_box["width"] / 2);
+				$posY = $the_box["top"] + ($this->img[1] / 2) - ($the_box["height"] / 2);
+				break;
 		
-		$text = "@ pikanus.net";
-		imagettftext($img, 14, 0, $x1_txt, $y1_txt, $letter_color, "assets/impact.ttf", $text);
+		}
+		 if(!isset($font_color[3]))
+			 $font_color[3] = 0;
+
+		$letter_color = imagecolorresolvealpha($img, $font_color[0], $font_color[1], $font_color[2],$font_color[3]);
+		imagettftext($img,$font_size,0,$posX,$posY,$letter_color,$font_file,$text); 
 		
 		switch ($this->img['mime']) { 
 			case "image/gif": 
@@ -193,8 +226,6 @@ class uploadImg{
 				break; 
 		}
 		imagedestroy($img);
-		
-		
 	}
 	
 	private function _checkDir($dir){
